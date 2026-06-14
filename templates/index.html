@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Dự đoán giá bất động sản</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+<div class="page">
+
+    <div class="header">
+        <h1>Dự đoán giá căn hộ chung cư</h1>
+        <p>Nhập thông tin căn hộ, hệ thống sẽ dự đoán giá bằng mô hình đã huấn luyện.</p>
+
+        <div class="model-info">
+            <span>Model: <b>{{ model_dir }}</b></span>
+
+            {% if prediction and prediction.r2 %}
+                <span>R²: <b>{{ prediction.r2 }}</b></span>
+            {% endif %}
+
+            {% if prediction and prediction.mae_billion %}
+                <span>MAE: <b>{{ prediction.mae_billion }}</b></span>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if error %}
+    <div class="alert">
+        <b>Lỗi:</b> {{ error }}
+    </div>
+    {% endif %}
+
+    <div class="layout">
+
+        <form method="POST" class="card">
+
+            <h2>Thông tin căn hộ</h2>
+
+            <div class="grid">
+                <label>
+                    Diện tích m² *
+                    <input name="area" type="number" step="0.1" required value="{{ input_values.area }}">
+                </label>
+
+                <label>
+                    Số phòng ngủ
+                    <input name="bedrooms" type="number" step="1" value="{{ input_values.bedrooms }}">
+                </label>
+
+                <label>
+                    Số phòng tắm
+                    <input name="bathrooms" type="number" step="1" value="{{ input_values.bathrooms }}">
+                </label>
+
+                <label>
+                    Số tầng / tầng căn hộ
+                    <input name="floor_count" type="number" step="1" value="{{ input_values.floor_count }}">
+                </label>
+
+                <label>
+                    Mặt tiền m
+                    <input name="frontage_width" type="number" step="0.1" value="{{ input_values.frontage_width }}">
+                </label>
+
+                <label>
+                    Chiều sâu nhà m
+                    <input name="house_depth" type="number" step="0.1" value="{{ input_values.house_depth }}">
+                </label>
+
+                <label>
+                    Độ rộng đường m
+                    <input name="road_width" type="number" step="0.1" value="{{ input_values.road_width }}">
+                </label>
+            </div>
+
+            <h2>Vị trí</h2>
+
+            <div class="grid">
+                <label>
+                    Tỉnh/Thành
+                    <input name="province" value="{{ input_values.province }}">
+                </label>
+
+                <label>
+                    Quận/Huyện
+                    <input name="district" value="{{ input_values.district }}">
+                </label>
+
+                <label>
+                    Phường/Xã
+                    <input name="ward" value="{{ input_values.ward }}">
+                </label>
+
+                <label>
+                    Đường
+                    <input name="street" value="{{ input_values.street }}">
+                </label>
+
+                <label>
+                    Tên dự án
+                    <input name="project_name" value="{{ input_values.project_name }}">
+                </label>
+
+                <label>
+                    Loại bất động sản
+                    <input name="property_type" value="{{ input_values.property_type }}">
+                </label>
+            </div>
+
+            <h2>Hướng và thời gian dự đoán</h2>
+
+            <div class="grid">
+                <label>
+                    Hướng nhà
+                    <select name="house_direction">
+                        {% for item in ["Unknown", "Đông", "Tây", "Nam", "Bắc", "Đông Nam", "Đông Bắc", "Tây Nam", "Tây Bắc"] %}
+                            <option value="{{ item }}" {% if input_values.house_direction == item %}selected{% endif %}>
+                                {{ item }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </label>
+
+                <label>
+                    Hướng ban công
+                    <select name="balcony_direction">
+                        {% for item in ["Unknown", "Đông", "Tây", "Nam", "Bắc", "Đông Nam", "Đông Bắc", "Tây Nam", "Tây Bắc"] %}
+                            <option value="{{ item }}" {% if input_values.balcony_direction == item %}selected{% endif %}>
+                                {{ item }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </label>
+
+                <label>
+                    Năm dự đoán
+                    <input name="published_year" type="number" value="{{ input_values.published_year }}">
+                </label>
+
+                <label>
+                    Tháng dự đoán
+                    <input name="published_month" type="number" min="1" max="12" value="{{ input_values.published_month }}">
+                </label>
+
+                <label>
+                    Ngày dự đoán
+                    <input name="published_day" type="number" min="1" max="31" value="{{ input_values.published_day }}">
+                </label>
+            </div>
+
+            <button type="submit">Dự đoán giá</button>
+
+        </form>
+
+        <div class="card result-card">
+            <h2>Kết quả dự đoán</h2>
+
+            {% if prediction %}
+                <div class="price">{{ prediction.price_billion }}</div>
+                <div class="sub-price">{{ prediction.price_vnd }}</div>
+
+                {% if prediction.mae_billion %}
+                <div class="box">
+                    <p>Sai số trung bình tham khảo:</p>
+                    <b>± {{ prediction.mae_billion }}</b>
+                </div>
+                {% endif %}
+
+                {% if prediction.lower and prediction.upper %}
+                <div class="box">
+                    <p>Khoảng giá tham khảo:</p>
+                    <b>{{ prediction.lower }} → {{ prediction.upper }}</b>
+                </div>
+                {% endif %}
+
+                {% if prediction.r2 %}
+                <div class="note">
+                    R² trên tập kiểm thử: <b>{{ prediction.r2 }}</b>.
+                    Đây là bài toán hồi quy nên không dùng accuracy như phân loại.
+                </div>
+                {% endif %}
+
+            {% else %}
+                <p class="empty">Nhập thông tin bên trái rồi bấm <b>Dự đoán giá</b>.</p>
+            {% endif %}
+
+            <div class="note">
+                <b>Lưu ý:</b> Giá dự đoán chỉ là giá tham khảo. Sai số thực tế có thể thay đổi do vị trí chính xác,
+                pháp lý, nội thất, tiện ích và biến động thị trường.
+            </div>
+        </div>
+
+    </div>
+</div>
+</body>
+</html>
